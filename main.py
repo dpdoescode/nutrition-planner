@@ -39,9 +39,52 @@ def getWeightInput():
       return int(weight)
     print("Enter valid weight between 50 and 500 lbs")
 
+def getAgeInput():
+  while True:
+    age = input("Enter age: ").strip()
+    if validateAge(age):
+      return int(age)
+    print("Enter valid age between 13 and 120")
 
-def calculateNutrientGoals(lbs, age, sex):
-  pass
+def getSexInput():
+  while True:
+    sex = input("Enter sex (male/female): ").strip().lower()
+    if validateSex(sex):
+      return sex
+    print("Enter male or female") 
+
+def getBudgetInput():
+  while True:
+    budget = input("Weekly budget ($): ").strip()
+    if validateBudget(budget):
+      return float(budget)
+    print("Enter a valid number above 0") 
+
+def calculateNutrientGoals(weight, age, sex):
+  protein = round(weight * 0.36)
+  if age <= 18:
+    calcium = 1300
+  elif age <= 50:
+    calcium = 1000 
+  else:
+    calcium = 1200
+  
+  if sex == "male":
+    iron = 8
+  elif age <= 50:
+    iron = 18 
+  else:
+    iron = 8
+
+  potassium = 3400 if sex == "male" else 2600
+  vitamin_c = 90 if sex == "male" else 75
+  return {
+    "protein" : protein,
+    "calcium" : calcium,
+    "iron" : iron,
+    "potassium" : potassium,
+    "vitamin_c" : vitamin_c
+  }
 
 # get which meals the user wants to eat per day
 while True:

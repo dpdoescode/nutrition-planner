@@ -10,6 +10,25 @@ def validateMeals(meals_input):
 def validateDays(days):
   return days.isdigit() and 1 <= int(days) <= 7
 
+def validateEmail(email):
+    return "@" in email and "." in email
+
+def validateWeight(weight):
+    return weight.isdigit() and 50 <= int(weight) <= 500  
+
+def validateWeight(age):
+    return age.isdigit() and 13 <= int(age) <= 120  
+
+def validateWeight(sex):
+    return sex.islower() in ["male", "female"]
+
+def validateBudget(budget):
+    try:
+        return float(budget) > 0
+    except ValueError:
+        return False 
+
+
 
 
   
