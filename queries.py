@@ -27,14 +27,14 @@ def get_user(username):
     return user
 
 # insert nutritional goals for a user
-def add_user_goals(user_id, calorie_goal, protein_goal_g, budget_weekly):
+def add_user_goals(user_id, calorie_goal, protein_goal_g, budget_weekly, calcium_mg, iron_mg, potassium_mg, vitamin_c_mg):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO user_goals (user_id, calorie_goal, protein_goal_g, budget_weekly)
-        VALUES (?, ?, ?, ?)
-        """, (user_id, calorie_goal, protein_goal_g, budget_weekly))
+        INSERT INTO user_goals (user_id, calorie_goal, protein_goal_g, budget_weekly, calcium_mg, iron_mg, potassium_mg, vitamin_c_mg)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (user_id, calorie_goal, protein_goal_g, budget_weekly, calcium_mg, iron_mg, potassium_mg, vitamin_c_mg))
 
     conn.commit()
     conn.close()
@@ -135,9 +135,10 @@ if __name__ == "__main__":
     user = get_user("mali2")
     print(user["username"], user["email"])
 
-    add_user_goals(1, 2000, 150, 50.00)
+    add_user_goals(1, 2000, 150, 50.00, 1000, 18, 3400, 90)
     goals = get_user_goals(1)
     print(goals["calorie_goal"], goals["protein_goal_g"], goals["budget_weekly"])
+    print(goals["calcium_mg"], goals["iron_mg"], goals["potassium_mg"], goals["vitamin_c_mg"])
 
     add_user_allergen(1, "gluten")
     add_user_allergen(1, "dairy")
