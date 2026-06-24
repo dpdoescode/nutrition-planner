@@ -1,5 +1,6 @@
 from database import get_connection
 
+# insert new user into the database
 def add_user(username, email):
     conn = get_connection()
     cursor = conn.cursor()
@@ -12,6 +13,7 @@ def add_user(username, email):
     conn.commit()
     conn.close()
 
+# fetch a single user by username
 def get_user(username):
     conn = get_connection()
     cursor = conn.cursor()
@@ -24,6 +26,7 @@ def get_user(username):
     conn.close()
     return user
 
+# insert nutritional goals for a user
 def add_user_goals(user_id, calorie_goal, protein_goal_g, budget_weekly):
     conn = get_connection()
     cursor = conn.cursor()
@@ -36,6 +39,7 @@ def add_user_goals(user_id, calorie_goal, protein_goal_g, budget_weekly):
     conn.commit()
     conn.close()
 
+# fetch goals for a given user
 def get_user_goals(user_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -48,6 +52,7 @@ def get_user_goals(user_id):
     conn.close()
     return goals
 
+# insert allergens for a user
 def add_user_allergen(user_id, allergen):
     conn = get_connection()
     cursor = conn.cursor()
@@ -60,6 +65,7 @@ def add_user_allergen(user_id, allergen):
     conn.commit()
     conn.close()
 
+# fetch all allergens for a given user
 def get_user_allergens(user_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -72,6 +78,7 @@ def get_user_allergens(user_id):
     conn.close()
     return allergens
 
+# insert meal preferences for a user
 def add_user_meal_preference(user_id, meal_name, meal_type):
     conn = get_connection()
     cursor = conn.cursor()
@@ -84,6 +91,7 @@ def add_user_meal_preference(user_id, meal_name, meal_type):
     conn.commit()
     conn.close()
 
+# fetch all meal preferences for a given user
 def get_user_meal_preferences(user_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -96,6 +104,31 @@ def get_user_meal_preferences(user_id):
     conn.close()
     return meals
 
+# insert meal plan for a user
+def add_meal_plans(user_id, plan_date, api_response, total_calories, total_protein_g, estimated_cost):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO meal_plans(user_id, plan_date, api_response, total_calories, total_protein_g, estimated_cost)
+        VALUES (?, ?, ?, ?, ?, ?) 
+        """, (user_id, plan_date, api_response, total_calories, total_protein_g, estimated_cost))
+
+    conn.commit()
+    conn.close()
+
+#fetch most recent meal plan for a given user
+def get_meal_plans(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM meal_plans WHERE user_id = ?
+        """, (user_id,))
+    
+    plan = cursor.fetchone()
+    conn.close()
+    return plan
 
 if __name__ == "__main__":
     add_user("mali2", "mali2@fsu.edu")
@@ -117,4 +150,9 @@ if __name__ == "__main__":
     meals = get_user_meal_preferences(1)
     for m in meals:
         print(m["meal_name"], m["meal_type"])
+    
+    add_meal_plans(1, "2026-06-24", "{}", 2000, 150, 50.00)
+    plan = get_meal_plans(1)
+    print(plan["plan_date"], plan["total_calories"], plan["estimated_cost"])
+
     

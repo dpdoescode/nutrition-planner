@@ -45,7 +45,21 @@ def create_tables():
     )
     """)
 
-    
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS meal_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        plan_date TEXT NOT NULL,
+        api_response TEXT NOT NULL,
+        total_calories INTERGER,
+        total_protein_g INTEGER,
+        estimated_cost REAL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) on DELETE CASCADE
+    )
+    """)
+
+
     conn.commit()
     conn.close()
 
