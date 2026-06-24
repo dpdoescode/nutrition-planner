@@ -20,6 +20,10 @@ def create_tables():
         calorie_goal INTEGER NOT NULL,
         protein_goal_g INTEGER NOT NULL,
         budget_weekly REAL NOT NULL,
+        calcium_mg INTEGER NOT NULL,
+        iron_mg INTEGER NOT NULL,
+        potassium_mg INTEGER,
+        vitamin_c_mg INTEGER,
         updated_at TEXT DEFAULT (datetime('now')),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
