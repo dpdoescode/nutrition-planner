@@ -1,4 +1,6 @@
-from validators import validateDays, validateMeals
+from queries import get_user, get_user_goals, add_user, add_user_goals, add_meal_plans
+from validators import validateDays, validateMeals, validateEmail, validateWeight, validateAge, validateSex, validateBudget, validateCalories
+from datetime import date
 import requests
 import random
 import time
@@ -60,6 +62,13 @@ def getBudgetInput():
       return float(budget)
     print("Enter a valid number above 0") 
 
+def getCaloriesInput():
+  while True:
+    calories = input("Daily calorie goal: ").strip()
+    if validateCalories(calories):
+      return int(calories)
+    print("Enter a number between 1000 and 3500") 
+
 def calculateNutrientGoals(weight, age, sex):
   protein = round(weight * 0.36)
   if age <= 18:
@@ -86,6 +95,146 @@ def calculateNutrientGoals(weight, age, sex):
     "vitamin_c" : vitamin_c
   }
 
+def loginOrRegister():
+  username = getUsernameInput()
+  user = get_user(username)
+  if user:
+    print(f"Welcome back!")
+    goals = get_user_goals(user[0])
+    calorie_goal = goals[2] if goals else 2000  # hardcode calorie goal if no goals exist for user
+    protein_goal = goals[3] if goals else 120  # hardcode protein goal if no goals exist for user
+    return user[0]
+  else:
+    print("Username not found, let's setup your profile!")
+    # else get user input for new user
+    email = getEmailInput()
+    weight = getWeightInput()
+    age = getAgeInput()
+    sex = getSexInput()
+    budget = getBudgetInput()
+    calorie_goal = getCaloriesInput()
+    nutrients = calculateNutrientGoals(weight, age, sex)
+    protein_goal = nutrients["protein"]
+    calcium_goal = nutrients["calcium"]
+    iron_goal = nutrients["iron"]
+    potassium_goal = nutrients["potassium"]
+    vitamin_c_goal = nutrients["vitamin_c"]
+
+    print(f"\nCalculated daily goals:")
+    print(f"  Protein:    {protein_goal}g")
+    print(f"  Calcium:    {nutrients['calcium']}mg")
+    print(f"  Iron:       {nutrients['iron']}mg")
+    print(f"  Potassium:  {nutrients['potassium']}mg")
+    print(f"  Vitamin C:  {nutrients['vitamin_c']}mg\n")
+
+    add_user(username, email)
+    user = get_user(username)
+    add_user_goals(user[0], calorie_goal, protein_goal, budget, calcium_goal, iron_goal, potassium_goal, vitamin_c_goal)
+
+    return user[0]  # return user_id for now. 
+
+def getRecipeForMeal(meal):
+  config = MEAL_CONFIG[meal]  # looks up whichever meal was passed in
+  dish = random.choice(config['dishType'])  # selects random dish because Recipe Search API only accepts one dishType at a time -- we want to avoid giving the same dishType
+  
+  params = {
+      "type" : "public",
+      "app_id": mealplan_appid,
+      "app_key": mealplan_api,
+      "mealType": config["mealType"],
+      "dishType": dish
+  }
+
+  time.sleep(4)  # add a delay to avoid hitting the API too quickly and getting rate limited
+  response = requests.get(BASE_URL, params=params)
+  print(response.status_code)
+  #  handle rate limit errors...
+  if response.status_code == 429:
+      print("  Rate limited, waiting 20 seconds...")
+      time.sleep(20)
+      response = requests.get(BASE_URL, params=params)
+        
+  if response.status_code != 200:
+    return None
+
+  hits = response.json().get("hits", [])
+  print(f"Hits: {len(hits)}")
+  if not hits:
+    return None 
+    
+
+  recipe = random.choice(hits[:5])["recipe"]
+  nutrients = recipe["totalNutrients"]
+  return {
+    "name": recipe["label"],
+    "calories": round(recipe["totalNutrients"]["ENERC_KCAL"]["quantity"]),
+    "protein": round(recipe["totalNutrients"]["PROCNT"]["quantity"]),
+    "calcium": round(nutrients["CA"]["quantity"]),
+    "iron": round(nutrients["FE"]["quantity"]),
+    "potassium": round(nutrients["K"]["quantity"]),
+    "vitamin_c": round(nutrients["VITC"]["quantity"]),
+    "url": recipe["url"]
+  }
+
+def fetchMealPlan(meals):
+  meal_plan = {}
+  for day in range(1, 8):
+    meal_plan[day] = {}
+    for meal in meals:
+      print(f"  Fetching Day {day} {meal.capitalize()}...")
+      meal_plan[day][meal] = getRecipeForMeal(meal)
+
+  return meal_plan
+
+def storeMealPlan(user_id, meal_plan, meals):
+  total_calories = 0
+  total_protein = 0
+  total_calcium = 0
+  total_iron = 0
+  total_potassium = 0
+  total_vitamin_c = 0
+
+  for day in range(1,8):
+    for meal in meals:
+      recipe = meal_plan[day][meal]
+      if recipe:
+        total_calories += recipe["calories"]
+        total_protein += recipe["protein"]
+        total_calcium += recipe["calcium"]
+        total_iron += recipe["iron"]
+        total_potassium += recipe["potassium"]
+        total_vitamin_c += recipe["vitamin_c"]
+
+  avg_calories = round(total_calories/7)
+  avg_protein = round(total_protein/7)
+  add_meal_plans(
+    user_id,
+    str(date.today()),
+    json.dumps(meal_plan),
+    avg_calories, 
+    avg_protein,
+    0.00
+  )
+  print("Meal plan saved!")
+
+
+def displayMealPlan(meal_plan, meals):
+    print("\n=== Your Meal Plan ===\n")
+    for day in range(1, 8):
+        print(f"--- Day {day} ---")
+        for meal in meals:
+            recipe = meal_plan[day][meal]
+            if not recipe:
+                print(f"  {meal.capitalize()}: No recipe found")
+            else:
+                print(f"  {meal.capitalize()}: {recipe['name']}")
+                print(f"    Calories: {recipe['calories']} | Protein: {recipe['protein']}g | Calcium: {recipe['calcium']}mg | Iron: {recipe['iron']}mg | Potassium: {recipe['potassium']}mg | Vitamin C: {recipe['vitamin_c']}mg")
+                print(f"    URL: {recipe['url']}")
+        print()
+
+
+user_id = loginOrRegister()
+
 # get which meals the user wants to eat per day
 while True:
     meals_input = input("Which meals? (breakfast, lunch, dinner, snack): ").strip().lower()
@@ -98,69 +247,7 @@ while True:
     print(f"Invalid meals: {', '.join(result)}")
     print(f"Valid options: breakfast, lunch, dinner, snack")
 
-#  get number of day the user wants to plan
-while True: 
-  days = input("How many days do you want to plan meals for? (1-7): ").strip()
-  if validateDays(days):
-    days = int(days)
-    break
-  print("Enter a number between 1 and 7")
-
-
-def getRecipesForMeal(meal, count): 
-  config = MEAL_CONFIG[meal]  # looks up whichever meal was passed in
-  dish = random.choice(config['dishType'])  # selects random dish because Recipe Search API only accepts one dishType at a time -- we want to avoid giving the same dishType
-
-  params = {
-      "type" : "public",
-      "app_id": mealplan_appid,
-      "app_key": mealplan_api,
-      "mealType": config["mealType"],
-      "dishType": dish
-  }
-
-  time.sleep(3)  # add a delay to avoid hitting the API too quickly and getting rate limited
-  response = requests.get(BASE_URL, params=params)
-  #  handle rate limit errors...
-  if response.status_code == 429:
-      print("  Rate limited, waiting 15 seconds...")
-      time.sleep(15)
-      response = requests.get(BASE_URL, params=params)
-        
-  if response.status_code != 200:
-    return []
-
-  hits = response.json().get("hits", [])
-  recipes = []
-  for hit in hits[:count]:
-      recipe = hit["recipe"]
-      recipes.append({
-          "name": recipe["label"],
-          "calories": round(recipe["totalNutrients"]["ENERC_KCAL"]["quantity"]),
-          "protein": round(recipe["totalNutrients"]["PROCNT"]["quantity"]),
-          "url": recipe["url"]
-      })
-  return recipes
-
-print("\n=== Your Meal Plan ===\n")
-
-# fetch recipes per meal type once (not once per day)
-meal_recipes = {}
-for meal in meals:
-    print(f"Fetching {meal} recipes...")
-    meal_recipes[meal] = getRecipesForMeal(meal, days)
-    time.sleep(5)
-
-# display plan using fetched recipes
-for day in range(1, days + 1):
-    print(f"--- Day {day} ---")
-    for meal in meals:
-        recipes = meal_recipes[meal]
-        if recipes is None or day > len(recipes):
-            print(f"  {meal.capitalize()}: No recipe found")
-        else:
-            recipe = recipes[day - 1]
-            print(f"  {meal.capitalize()}: {recipe['name']}")
-            print(f"  Calories: {recipe['calories']} | Protein: {recipe['protein']}g")
-            print(f"  URL: {recipe['url']}")
-    print()
+print("\nFetching your meal plan...\n")
+meal_plan = fetchMealPlan(meals)
+storeMealPlan(user_id, meal_plan, meals)
+displayMealPlan(meal_plan, meals)

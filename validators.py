@@ -16,17 +16,20 @@ def validateEmail(email):
 def validateWeight(weight):
     return weight.isdigit() and 50 <= int(weight) <= 500  
 
-def validateWeight(age):
+def validateAge(age):
     return age.isdigit() and 13 <= int(age) <= 120  
 
-def validateWeight(sex):
-    return sex.islower() in ["male", "female"]
+def validateSex(sex):
+    return sex in ["male", "female"]
 
 def validateBudget(budget):
     try:
         return float(budget) > 0
     except ValueError:
         return False 
+
+def validateCalories(calories):
+    return calories.isdigit() and 1000 <= int(calories) <= 3500
 
 
 
