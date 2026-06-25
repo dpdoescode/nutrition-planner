@@ -100,7 +100,7 @@ def calculateNutrientGoals(weight, age, sex):
 
 def getAllergensInput():
   while True:
-    allergens_list = input("Any allergens? (gluten, dairy, peanuts, soy, eggs, shellfish, fish, tree nuts, or none)").strip().lower()
+    allergens_list = input("Any allergens? (gluten, dairy, peanuts, soy, eggs, shellfish, fish, tree nuts, or none): ").strip().lower()
     
     valid, result = validateAllergens(allergens_list)
 
@@ -289,7 +289,6 @@ def storeMealPlan(user_id, meal_plan, meals):
 def displayMealPlan(meal_plan, meals):
     print("\n=== Your Meal Plan ===\n")
     total_cost = 0.0 
-    for day in range(1, 8):
     for day in range(1, 3):
         print(f"--- Day {day} ---")
         for meal in meals:
