@@ -71,12 +71,12 @@ def get_user_allergens(user_id):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT * FROM user_allergens WHERE user_id = ?
+        SELECT allergen FROM user_allergens WHERE user_id = ?
         """, (user_id,))
     
     allergens = cursor.fetchall()  # fetch all because user can have multiple allergens
     conn.close()
-    return allergens
+    return [row[0] for row in allergens]
 
 # insert meal preferences for a user
 def add_user_meal_preference(user_id, meal_name, meal_type):

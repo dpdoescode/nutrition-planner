@@ -99,7 +99,7 @@ def getAllergensInput():
   while True:
     allergens_list = input("Any allergens? (gluten, dairy, peanuts, soy, eggs, shellfish, fish, tree nuts, or none)").strip().lower()
     
-    valid, result = validateAllergens(allergens_input)
+    valid, result = validateAllergens(allergens_list)
 
     if valid:
       return result
@@ -110,11 +110,12 @@ def loginOrRegister():
   username = getUsernameInput()
   user = get_user(username)
   if user:
+    allergens = get_user_allergens(user[0])
     print(f"Welcome back!")
     goals = get_user_goals(user[0])
     calorie_goal = goals[2] if goals else 2000  # hardcode calorie goal if no goals exist for user
     protein_goal = goals[3] if goals else 120  # hardcode protein goal if no goals exist for user
-    return user[0]
+    return user[0], allergens
   else:
     print("Username not found, let's setup your profile!")
     # else get user input for new user
@@ -123,6 +124,7 @@ def loginOrRegister():
     age = getAgeInput()
     sex = getSexInput()
     budget = getBudgetInput()
+    allergens = getAllergensInput()  # list of valid allergens
     calorie_goal = getCaloriesInput()
     nutrients = calculateNutrientGoals(weight, age, sex)
     protein_goal = nutrients["protein"]
@@ -141,8 +143,10 @@ def loginOrRegister():
     add_user(username, email)
     user = get_user(username)
     add_user_goals(user[0], calorie_goal, protein_goal, budget, calcium_goal, iron_goal, potassium_goal, vitamin_c_goal)
+    for allergen in allergens:
+      add_user_allergen(user[0], allergen)
 
-    return user[0]  # return user_id for now. 
+    return user[0], allergens  # return user_id for now. 
 
     
 
@@ -174,7 +178,7 @@ def getRecipeForMeal(meal):
 
   for allergen in allergens:
     if allergen in ALLERGENS_MAP:
-      params["health"] = ALLERGENS_MAP[allergen]  # add allergen filter to API params
+      params["health"] = [ALLERGENS_MAP[a] for a in allergens if a in ALLERGENS_MAP]  # add allergen filter to API params
 
   time.sleep(4)  # add a delay to avoid hitting the API too quickly and getting rate limited
   response = requests.get(BASE_URL, params=params)
@@ -268,7 +272,7 @@ def displayMealPlan(meal_plan, meals):
         print()
 
 
-user_id = loginOrRegister()
+user_id, allergens = loginOrRegister()
 
 # get which meals the user wants to eat per day
 while True:
