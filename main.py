@@ -1,4 +1,4 @@
-from queries import get_user, get_user_goals, add_user, add_user_goals, add_meal_plans
+from queries import get_user, get_user_goals, add_user, add_user_goals, add_meal_plans, add_user_allergen, get_user_allergens
 from validators import validateDays, validateMeals, validateEmail, validateWeight, validateAge, validateSex, validateBudget, validateCalories, validateAllergens
 from datetime import date
 import requests
@@ -217,7 +217,7 @@ def getRecipeForMeal(meal):
 
 def fetchMealPlan(meals):
   meal_plan = {}
-  for day in range(1, 8):
+  for day in range(1, 3):
     meal_plan[day] = {}
     for meal in meals:
       print(f"  Fetching Day {day} {meal.capitalize()}...")
@@ -233,7 +233,7 @@ def storeMealPlan(user_id, meal_plan, meals):
   total_potassium = 0
   total_vitamin_c = 0
 
-  for day in range(1,8):
+  for day in range(1,3):
     for meal in meals:
       recipe = meal_plan[day][meal]
       if recipe:
@@ -244,8 +244,8 @@ def storeMealPlan(user_id, meal_plan, meals):
         total_potassium += recipe["potassium"]
         total_vitamin_c += recipe["vitamin_c"]
 
-  avg_calories = round(total_calories/7)
-  avg_protein = round(total_protein/7)
+  avg_calories = round(total_calories/2)
+  avg_protein = round(total_protein/2)
   add_meal_plans(
     user_id,
     str(date.today()),
@@ -259,7 +259,7 @@ def storeMealPlan(user_id, meal_plan, meals):
 
 def displayMealPlan(meal_plan, meals):
     print("\n=== Your Meal Plan ===\n")
-    for day in range(1, 8):
+    for day in range(1, 3):
         print(f"--- Day {day} ---")
         for meal in meals:
             recipe = meal_plan[day][meal]
