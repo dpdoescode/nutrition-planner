@@ -164,7 +164,7 @@ ALLERGENS_MAP = {  # maps user-friendly allergen names to API parameters
   "tree nuts" : "TREE_NUT_FREE",
 }
 recipe_cache = {}  # reusing recipes instead of calling the API again for speed
-def getRecipeForMeal(meal):
+def getRecipeForMeal(meal, allergens):
   if meal in recipe_cache:  # check if meal already has a recipe cached
     return random.choice(recipe_cache[meal])  # return a random recipe from the cached list
 
@@ -230,7 +230,8 @@ def getRecipePrice(ingredients):
 
   results = search.json() # parse response as JSON
 
-  if not results:
+  if not isinstance(results, list) or not results:
+    print("Spoonacular error:", results)
     return 0.0
   
   recipe_id = results[0]["id"] # grab spoonacular recipe id from first result
@@ -250,7 +251,7 @@ def fetchMealPlan(meals):
     meal_plan[day] = {}
     for meal in meals:
       print(f"  Fetching Day {day} {meal.capitalize()}...")
-      meal_plan[day][meal] = getRecipeForMeal(meal)
+      meal_plan[day][meal] = getRecipeForMeal(meal, allergens)
 
   return meal_plan
 
