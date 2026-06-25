@@ -1,5 +1,5 @@
 from queries import get_user, get_user_goals, add_user, add_user_goals, add_meal_plans
-from validators import validateDays, validateMeals, validateEmail, validateWeight, validateAge, validateSex, validateBudget, validateCalories
+from validators import validateDays, validateMeals, validateEmail, validateWeight, validateAge, validateSex, validateBudget, validateCalories, validateAllergens
 from datetime import date
 import requests
 import random
@@ -8,7 +8,7 @@ import json
 import os
 
 mealplan_api = os.getenv('MEALPLAN_API')
-mealplan_appid = 'b4a47ae5'
+mealplan_appid = '8d9a292c'
 userid = 'cli_user_1'
 BASE_URL = "https://api.edamam.com/api/recipes/v2" 
 
@@ -95,6 +95,17 @@ def calculateNutrientGoals(weight, age, sex):
     "vitamin_c" : vitamin_c
   }
 
+def getAllergensInput():
+  while True:
+    allergens_list = input("Any allergens? (gluten, dairy, peanuts, soy, eggs, shellfish, fish, tree nuts, or none)").strip().lower()
+    
+    valid, result = validateAllergens(allergens_input)
+
+    if valid:
+      return result
+    
+    print(f"Invalid allergens: {', '.join(result)}")
+    
 def loginOrRegister():
   username = getUsernameInput()
   user = get_user(username)
@@ -133,7 +144,23 @@ def loginOrRegister():
 
     return user[0]  # return user_id for now. 
 
+    
+
+ALLERGENS_MAP = {  # maps user-friendly allergen names to API parameters
+  "gluten" : "GLUTEN_FREE",
+  "dairy" : "DAIRY_FREE",
+  "peanuts" : "PEANUT_FREE",
+  "soy" : "SOY_FREE",
+  "eggs" : "EGG_FREE",
+  "shellfish" : "SHELLFISH_FREE",
+  "fish" : "FISH_FREE",
+  "tree nuts" : "TREE_NUT_FREE",
+}
+recipe_cache = {}  # reusing recipes instead of calling the API again for speed
 def getRecipeForMeal(meal):
+  if meal in recipe_cache:  # check if meal already has a recipe cached
+    return random.choice(recipe_cache[meal])  # return a random recipe from the cached list
+
   config = MEAL_CONFIG[meal]  # looks up whichever meal was passed in
   dish = random.choice(config['dishType'])  # selects random dish because Recipe Search API only accepts one dishType at a time -- we want to avoid giving the same dishType
   
@@ -145,9 +172,13 @@ def getRecipeForMeal(meal):
       "dishType": dish
   }
 
+  for allergen in allergens:
+    if allergen in ALLERGENS_MAP:
+      params["health"] = ALLERGENS_MAP[allergen]  # add allergen filter to API params
+
   time.sleep(4)  # add a delay to avoid hitting the API too quickly and getting rate limited
   response = requests.get(BASE_URL, params=params)
-  print(response.status_code)
+  # print(response.status_code) to verify response status code
   #  handle rate limit errors...
   if response.status_code == 429:
       print("  Rate limited, waiting 20 seconds...")
@@ -158,23 +189,27 @@ def getRecipeForMeal(meal):
     return None
 
   hits = response.json().get("hits", [])
-  print(f"Hits: {len(hits)}")
+  # print(f"Hits: {len(hits)}") verifying fetch hit
   if not hits:
     return None 
-    
 
-  recipe = random.choice(hits[:5])["recipe"]
-  nutrients = recipe["totalNutrients"]
-  return {
-    "name": recipe["label"],
-    "calories": round(recipe["totalNutrients"]["ENERC_KCAL"]["quantity"]),
-    "protein": round(recipe["totalNutrients"]["PROCNT"]["quantity"]),
-    "calcium": round(nutrients["CA"]["quantity"]),
-    "iron": round(nutrients["FE"]["quantity"]),
-    "potassium": round(nutrients["K"]["quantity"]),
-    "vitamin_c": round(nutrients["VITC"]["quantity"]),
-    "url": recipe["url"]
-  }
+  recipes = []
+  for hit in hits[:10]:
+    recipe = hit["recipe"] 
+    nutrients = recipe["totalNutrients"]
+    recipes.append({
+      "name": recipe["label"],
+      "calories": round(recipe["totalNutrients"]["ENERC_KCAL"]["quantity"]),
+      "protein": round(recipe["totalNutrients"]["PROCNT"]["quantity"]),
+      "calcium": round(nutrients["CA"]["quantity"]),
+      "iron": round(nutrients["FE"]["quantity"]),
+      "potassium": round(nutrients["K"]["quantity"]),
+      "vitamin_c": round(nutrients["VITC"]["quantity"]),
+      "url": recipe["url"]
+    })
+  
+  recipe_cache[meal] = recipes  # cache the recipes for future use
+  return random.choice(recipes)  # return a random recipe from the list
 
 def fetchMealPlan(meals):
   meal_plan = {}
