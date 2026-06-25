@@ -12,6 +12,9 @@ mealplan_appid = 'b4a47ae5'
 userid = 'cli_user_1'
 BASE_URL = "https://api.edamam.com/api/recipes/v2" 
 
+spoonacular_api = os.getenv('SPOONACULAR_API')
+spoonacular_url = "https://api.spoonacular.com/recipes" 
+
 # maps each meal to its API params
 MEAL_CONFIG = {
     "breakfast": {"mealType": "breakfast", "dishType": ["egg", "bread", "cereals", "pancake", "pastry"]},
@@ -173,8 +176,33 @@ def getRecipeForMeal(meal):
     "iron": round(nutrients["FE"]["quantity"]),
     "potassium": round(nutrients["K"]["quantity"]),
     "vitamin_c": round(nutrients["VITC"]["quantity"]),
-    "url": recipe["url"]
+    "url": recipe["url"],
+    "ingredients": recipe.get("ingredientLines", [])
   }
+def getRecipePrice(ingredients):
+  ingredient_str = ", ".join(ingredients) # convert list to a string: 2 cups flour, 1 tbsp butter, 3 eggs
+
+  search = requests.get(f"{spoonacular_url}/findByIngredients", params={
+    "ingredients": ingredient_str,  # pass ingredients as search query
+    "apiKey": spoonacular_api,
+    "number": 1
+  })
+
+  results = search.json() # parse response as JSON
+
+  if not results:
+    return 0.0
+  
+  recipe_id = results[0]["id"] # grab spoonacular recipe id from first result
+
+  # use that id to get the price breakdown for that recipe
+  price = requests.get(f"{spoonacular_url}/{recipe_id}/priceBreakdownWidget.json", params={
+    "apiKey": spoonacular_api
+  })
+
+  data = price.json() 
+  return round(data.get("totalCostPerServing", 0) / 100, 2)  #spoonacular returns price in cents so divide by 100 to get dollars
+
 
 def fetchMealPlan(meals):
   meal_plan = {}
@@ -220,6 +248,7 @@ def storeMealPlan(user_id, meal_plan, meals):
 
 def displayMealPlan(meal_plan, meals):
     print("\n=== Your Meal Plan ===\n")
+    total_cost = 0.0 
     for day in range(1, 8):
         print(f"--- Day {day} ---")
         for meal in meals:
@@ -227,10 +256,14 @@ def displayMealPlan(meal_plan, meals):
             if not recipe:
                 print(f"  {meal.capitalize()}: No recipe found")
             else:
+                price = getRecipePrice(recipe["ingredients"])
+                total_cost += price
                 print(f"  {meal.capitalize()}: {recipe['name']}")
                 print(f"    Calories: {recipe['calories']} | Protein: {recipe['protein']}g | Calcium: {recipe['calcium']}mg | Iron: {recipe['iron']}mg | Potassium: {recipe['potassium']}mg | Vitamin C: {recipe['vitamin_c']}mg")
+                print(f"    Est. Cost: ${price}")
                 print(f"    URL: {recipe['url']}")
         print()
+    print(f"Estimated Total Weekly Cost: ${round(total_cost, 2)}")
 
 
 user_id = loginOrRegister()
