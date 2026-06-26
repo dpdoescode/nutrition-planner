@@ -7,9 +7,6 @@ def validateMeals(meals_input):
         return True, meals
     return False, invalid
 
-def validateDays(days):
-  return days.isdigit() and 1 <= int(days) <= 7
-
 def validateEmail(email):
     return "@" in email and "." in email
 
